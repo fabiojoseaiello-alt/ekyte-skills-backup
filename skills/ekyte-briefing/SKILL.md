@@ -78,7 +78,27 @@ sessao_notebook_cache = {
 ```
 
 - **Cache HIT** (cliente já consultado): reusar síntese.
-- **Cache MISS** OU primeira task do cliente na sessão: invocar `/cs-notebooklm-consulta-cliente`.
+- **Cache MISS** OU primeira task do cliente na sessão: seguir pro passo 3.5 antes de invocar NotebookLM.
+
+### 3.5) Cache persistente de público (TTL 90d)
+
+Antes de invocar `/cs-notebooklm-consulta-cliente`, checar `clientes/<cliente>/publicos-cache.md`. Formato e regras: ver [_publicos-cache-template.md](../../../clientes/_skill-ekyte/_publicos-cache-template.md).
+
+1. **Identificar a linha/categoria** a partir do título/input:
+   - Produto explícito no título (`Saint Tropez`, `Euro Baby`) → mapear pra linha conhecida.
+   - Sinal contextual sem produto (`remarketing produto X`) → perguntar ao Fabio qual linha.
+   - Cliente sem segmentação (Fiberwan, Outmat) → linha `Geral`.
+
+2. **Abrir `publicos-cache.md`** do cliente. Buscar bloco `## <linha>` (match case-insensitive, ignora acentos).
+
+3. **Decidir HIT/STALE/MISS:**
+   - **HIT** (idade < 75d): pré-preencher campos 3-9 do `_base-criativo.md` (consciência, faixa, sexo, ganchos) + avatar/ofertas/restrições/tom-de-voz com os valores do cache. Marcar no preview: `[do cache: <linha> · <N>d]`. **Pula** o passo 4 (NotebookLM) — cache já cobre o público.
+   - **STALE** (75d ≤ idade < 90d): usa o cache **mas** mostra aviso no preview da pergunta ativa: `⚠️ cache de público da linha "<X>" tem <N>d (expira em <M>d). Quer atualizar antes de seguir? (sim/não, default não)`. Resposta sim = força MISS path. Não/silêncio = HIT silencioso.
+   - **MISS** (idade ≥ 90d OU bloco inexistente OU arquivo inexistente): segue pro passo 4 (NotebookLM completo). Após sucesso da consulta, **escrever o bloco no cache** (passo 4.5).
+
+4. **Modo subskill chamado pelo modo inline rápido da `/ekyte-task`:** se o pacote de entrada vem com flag `modo_inline_rapido: true` (ver `/ekyte-task` passo 8.4), a estratégia muda:
+   - HIT → usa cache, **não invoca NotebookLM em hipótese alguma**. Briefing inline montado direto da OBS da planilha + cache de público.
+   - MISS/STALE-com-update → invoca `/cs-notebooklm-consulta-cliente` **só com a pergunta de público** (1 pergunta dirigida sobre avatar/faixa/sexo/consciência/ganchos da linha alvo), não as 5 do `_base-criativo.md`. ~1min em vez de ~5min. Após resposta, popular cache normalmente.
 
 ### 4) Invocar `/cs-notebooklm-consulta-cliente`
 
@@ -96,6 +116,25 @@ A skill `/cs-notebooklm-consulta-cliente` faz o trabalho pesado: decompõe, disp
 - Sessão expirada → avisar Fabio (`"Sessão NotebookLM expirou. Roda 'notebooklm login' e tenta de novo. Continuo o briefing sem síntese?"`) e perguntar se segue ou aborta.
 
 Cachear síntese em memória (sessão).
+
+### 4.5) Popular cache persistente de público (após sucesso do passo 4)
+
+Se o passo 3.5 deu MISS/STALE-com-update e o passo 4 (NotebookLM) retornou síntese válida, **escrever bloco no cache** antes de seguir pro 5:
+
+1. Abrir/criar `clientes/<cliente>/publicos-cache.md` (formato em [_publicos-cache-template.md](../../../clientes/_skill-ekyte/_publicos-cache-template.md)).
+2. Se já existe bloco `## <linha>`: **substituir inteiro** (preserva os demais blocos do arquivo).
+3. Se não existe: **acrescentar ao final** do arquivo.
+4. Atualizar header "Última escrita: YYYY-MM-DD".
+5. Campos a gravar (NotebookLM silencioso em algum = `_não documentado_`, **nunca fabricar**):
+   - `ult_consulta`, `expira` (ult_consulta + 90d), `fonte` (URL do notebook)
+   - `Avatar` (texto narrativo 2-4 linhas)
+   - `Faixa etária dominante` (bins)
+   - `Sexo` (Masculino|Feminino|Ambos)
+   - `Nível de consciência` (1-5 com labels)
+   - `Ganchos com tração documentada` (lista)
+   - `Ofertas que já rodaram`, `Restrições documentadas`, `Tom de voz`
+
+Esse cache fica disponível pras próximas sessões (modo inline rápido da `/ekyte-task` consome direto sem precisar invocar essa skill).
 
 ### 5) Pré-preenchimento dos campos do template
 
@@ -272,6 +311,10 @@ A `/ekyte-task` injeta `briefing_html` em `description_create_task` e segue o fl
 7. **Cliente sem Drive em `drives.md`** (DOM Suprimentos atualmente): perguntar no preview e oferecer `/ekyte-briefing-refresh` pra persistir.
 
 8. **Não chamar MCP do Ekyte.** Esta skill **não** sobe nada — só monta briefing. A subida é da `/ekyte-task`.
+
+9. **Cache de público não é compartilhado entre clientes**, mesmo quando NotebookLM é compartilhado (Euro+Eleva). Cada cliente tem seu `publicos-cache.md` — público é por marca, não por notebook.
+
+10. **MISS de cliente sem NotebookLM cadastrado**: não cachear nada. Briefing segue com pergunta ativa pura, e o `publicos-cache.md` **não é criado** pra esse cliente até que ele tenha NotebookLM.
 
 ## Como invocar
 

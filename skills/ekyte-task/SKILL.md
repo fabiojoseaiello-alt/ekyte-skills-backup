@@ -192,27 +192,47 @@ Briefing:
 <<resumo do briefing — primeiras 5 linhas>>
 [ver completo abaixo]
 
+Após criação: vou disparar `generate-tasks` no projeto pra
+sair de "Não planejada" → "Ativa" automaticamente (passo 9.5).
+
 ---
 
-Confirma criação? (sim/não/editar)
+Confirma criação + geração? (sim/não/editar)
 ```
 
 Se for lote (modo B com planilha): mostrar tabela resumida (linha | título | tipo | prazo) e pedir aprovação **única** pro lote, OU "1 a 1" se o Fabio preferir.
 
 **Nunca** dispara `criar_tarefa_tool` sem ver o "sim".
 
-### 8.4) Modo Inline Rápido (3-5 tasks com OBS robusta) — lição 2026-05-05
+### 8.4) Modo Inline Rápido (3-5 tasks com OBS robusta) — lição 2026-05-05, revisado 2026-05-14
 
 Quando lote é **3-5 tasks** + a coluna `OBS/Descrição` da planilha já tem texto substancial (objetivo claro, link de transcrição/referência) + cliente tem NotebookLM cadastrado: **pular invocação formal de `/ekyte-briefing`** e montar briefings inline em texto plano direto, usando os templates da sigla só como guia estrutural.
 
 Regra prática:
-- Lote ≤5 + OBS substancial + cliente conhecido → **inline rápido** (este modo). Não rodar `/cs-notebooklm-consulta-cliente` — a OBS já dá contexto.
+- Lote ≤5 + OBS substancial + cliente conhecido → **inline rápido** (este modo). Consumir cache persistente de público (8.4.1).
 - Lote ≤5 + OBS vazia/genérica OU cliente novo → **fluxo formal** com `/ekyte-briefing` (passo 6 padrão).
 - Lote ≥6 → **modo script Python** (8.5).
 
 Por que funciona em 3-5: o overhead de invocar `/ekyte-briefing` (consulta NotebookLM + perguntas ativas) só compensa quando o input é raso. Se a planilha já tem briefing parcial pronto, basta enriquecer estruturalmente (Objetivo / Contexto / Entregáveis / Sucesso) e disparar.
 
-Validado em 2026-05-05 com lote de 5 tasks (Fiberwan x2 + Outmat x3): 5 criações em paralelo, ~30s, sem perda de qualidade do briefing.
+Validado em 2026-05-05 com lote de 5 tasks (Fiberwan x2 + Outmat x3): 5 criações em paralelo, ~30s.
+
+#### 8.4.1) Público vem do cache persistente, sempre
+
+Lição 2026-05-14: a v1 do modo inline pulava NotebookLM totalmente — campo público acabava saindo "a consultar" ou genérico. Conflito direto com a regra [public sempre vem do NotebookLM](../../../memory/feedback_publico_notebook.md).
+
+**Resolução:** modo inline consulta `clientes/<cliente>/publicos-cache.md` antes de montar briefing. Layout e TTL: ver [_publicos-cache-template.md](../../../clientes/_skill-ekyte/_publicos-cache-template.md).
+
+Fluxo:
+
+1. **Identificar a linha** de cada task do lote (Colchões adultos / Euro Baby / Geral / etc).
+2. **Para cada linha distinta no lote**, abrir o cache uma vez:
+   - **HIT** (< 75d) → usa direto, não consulta NotebookLM. Briefing inline ganha bloco "Público" preenchido (avatar + faixa + sexo + consciência + ganchos) com marcador `[do cache: <linha> · <N>d]`.
+   - **STALE** (75-90d) → pergunta no pre-fly: `⚠️ cache de público da linha "Euro Baby" tem 78d. Atualizar antes do lote? (sim/não)`. Sem resposta = HIT silencioso.
+   - **MISS** (≥ 90d OU inexistente) → invocar `/cs-notebooklm-consulta-cliente` **uma única vez por linha do lote**, com 1 pergunta dirigida só de público (não as 5 padrão). ~1min/linha. Após resposta, escrever bloco no cache.
+3. **Não consultar NotebookLM mais de uma vez por linha por lote.** Se 4 tasks são todas "Colchões adultos", consulta roda 1x (no MISS) e as 4 reusam.
+
+Quando MISS rola, o cache populado fica disponível pras próximas sessões — paga o investimento em 2-3 lotes.
 
 ### 8.5) Modo Lote — script Python (≥6 tasks)
 
@@ -248,6 +268,68 @@ Após confirmação, chamar `ekyte.criar_tarefa_tool` com os 8 campos:
 
 Reportar sucesso/erro de cada criação. Se erro: parar, mostrar a mensagem, não tentar a próxima sem aprovação.
 
+### 9.5) Gerar tarefas (sair de "Não planejada" → "Ativa") — adicionado 2026-05-14
+
+A MCP `ekyte` só cria a task; ela cai como **"Não planejada"** dentro do projeto e precisa do passo "Gerar tarefas" pra virar **"Ativa"** (executável, visível pro responsável, contando no kanban). Esse passo não está exposto na MCP — usar REST direto.
+
+**Endpoint** (descoberto e validado 2026-05-14 via DevTools + teste curl real):
+```
+POST https://api.ekyte.com/api/v2/companies/{company_id}/projects/{project_id}/generate-tasks
+Headers:
+  Authorization: Bearer <EKYTE_TOKEN>
+  Content-Type: application/json
+Body: []
+```
+
+**Atenção ao body:** é **array vazio `[]`**, não objeto `{}`. Mandar `{}` retorna 422 com `"requires a JSON array"`. O backend é .NET e desserializa em `System.Int64[]`. Hipótese: passar `[123, 456]` ativaria só essas tasks específicas, mas `[]` ativa **todas** as "Não planejadas" do projeto (validado 200 OK + `plannedTasksCount: 0` no retorno).
+
+**Comportamento:** ativa **todas** as tasks "Não planejadas" do projeto de uma vez — não é por-task, é por-projeto. Validado em 2 projetos reais (Zabeu 297264 e Outmat 291499 em 2026-05-14/15).
+
+**Formato da resposta 200 OK (duas variantes possíveis — preparar pra ambas):**
+
+- **Variante A — array de tasks** (quando o projeto tem poucas "Não planejadas" pendurinhas): `[{id, ctcTaskType, executor, phase, ...}, ...]`. `N ativadas = len(response)`.
+- **Variante B — objeto `{project: {...}}` com métricas** (quando o projeto tem muitas tasks no total): a resposta é o objeto completo do projeto. Campos chave pra reportar:
+  - `unplannedProjectTasksCount` → **deve ser 0** após sucesso (confirma que ativou tudo que tinha pra ativar)
+  - `plannedActiveProjectTasksCount` → quantas tasks estão ativas no projeto agora
+  - `overduePlannedProjectTasksCount` → bônus: quantas estão atrasadas (alerta opcional)
+
+**Reportar pro Fabio independente da variante**: `✅ Projeto <nome>: 0 tasks não-planejadas. <X> ativas no total.`
+
+**Implementação no fluxo:**
+
+1. Ler `clientes/_skill-ekyte/.env` (formato em `.env.example`). Se arquivo não existe, avisar Fabio: `"⚠️ clientes/_skill-ekyte/.env não cadastrado. Tasks criadas vão ficar como 'Não planejada' até você gerar manualmente no Ekyte. Quer cadastrar o token agora? (sim/não)"`. Se "não", pular este passo e seguir pro 10.
+
+2. **Agrupar tasks criadas por `ctc_task_project_id_create_task`**. Lote de 5 tasks em projetos diferentes = 5 chamadas; lote de 10 tasks todas no mesmo Q2 do Euro = 1 chamada.
+
+3. **Para cada `project_id` único**, disparar:
+   ```bash
+   curl -X POST "$EKYTE_API_BASE/companies/$EKYTE_COMPANY_ID/projects/<project_id>/generate-tasks" \
+     -H "Authorization: Bearer $EKYTE_TOKEN" \
+     -H "Content-Type: application/json" \
+     -H "Origin: https://app.ekyte.com" \
+     -H "Referer: https://app.ekyte.com/" \
+     -d '[]'
+   ```
+   **Body = `[]` (array vazio).** Mandar `{}` retorna 422.
+
+4. **Tratamento de resposta:**
+   - **200 OK** → reportar `✅ <N> tasks do projeto <nome> ativadas`.
+   - **401 Unauthorized** → token expirou. Avisar Fabio: `"❌ Token EKYTE_TOKEN expirou. Renova via DevTools (F12 → Network → qualquer request pra api.ekyte.com → Headers → copia Authorization). As tasks foram criadas mas ficaram como 'Não planejada' — depois de renovar, pode rodar /ekyte-task-gerar <project_id> ou ativar manualmente."`. **Não tentar refresh automático** — token é JWT manual.
+   - **Outros erros** → reportar status + body, não interromper outras chamadas de outros projetos, mas avisar no relatório final.
+
+5. **Relatório consolidado** após todas as chamadas:
+   ```
+   ✅ 8 tasks criadas
+   ✅ Geradas: Euro Colchões | Q2/2026 (5 tasks), Fiberwan | Q2/2026 (3 tasks)
+   ```
+
+   Se algum projeto falhou na geração:
+   ```
+   ✅ 8 tasks criadas
+   ✅ Geradas: Euro Colchões | Q2/2026 (5 tasks)
+   ⚠️ NÃO geradas: Fiberwan | Q2/2026 (3 tasks) — erro 401, token expirado
+   ```
+
 ### 10) Atualizar cache
 
 Sempre que descobrir um `project_id` novo (ou um `task_type_id` confirmado de tipo Personalizada), atualizar `clientes/_skill-ekyte/cache.md` antes de encerrar.
@@ -270,6 +352,10 @@ Sempre que descobrir um `project_id` novo (ou um `task_type_id` confirmado de ti
 5. **Erro = parar.** Se uma criação falhar (HTTP error, timeout, schema rejeitado), pausar o fluxo e reportar. Não seguir pra próxima task do lote sem aprovação.
 
 6. **Sem auto-execução.** Mesmo que o Fabio diga "confia, manda tudo", insistir no preview da primeira task pelo menos.
+
+7. **Gerar tarefas é parte obrigatória do fluxo.** Toda task criada deve sair de "Não planejada" no final da execução. Se token expirou ou `.env` não existe, **avisar explicitamente** que as tasks ficaram em rascunho — Fabio não pode descobrir isso depois.
+
+8. **Token Ekyte é sensível.** Nunca logar/imprimir o valor de `EKYTE_TOKEN` nas mensagens pro Fabio (mesmo truncado). Só dizer "token presente/ausente/expirado".
 
 ---
 
