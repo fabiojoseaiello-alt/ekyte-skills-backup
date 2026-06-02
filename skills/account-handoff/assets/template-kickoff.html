@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Kickoff · Cliente</title>
+<style>
+  /* ============================================================
+     TOKENS
+     ============================================================ */
+  :root {
+    /* Color */
+    --bg: #FAFAFA;
+    --bg-elevated: #FFFFFF;
+    --bg-subtle: #F4F4F4;
+    --ink-1: #0A0A0A;
+    --ink-2: #525252;
+    --ink-3: #A3A3A3;
+    --ink-4: #D4D4D4;
+    --line: #E7E7E7;
+    --line-strong: #D4D4D4;
+    --accent: #FF5A1F;
+    --accent-hover: #E84A0F;
+    --accent-tint: rgba(255, 90, 31, 0.08);
+    --ok: #16A34A;
+    --ok-tint: rgba(22, 163, 74, 0.06);
+    --warn: #D97706;
+    --warn-tint: rgba(217, 119, 6, 0.06);
+    --danger: #DC2626;
+    --danger-tint: rgba(220, 38, 38, 0.06);
+
+    /* Spacing */
+    --s-1: 4px;
+    --s-2: 8px;
+    --s-3: 12px;
+    --s-4: 16px;
+    --s-5: 24px;
+    --s-6: 32px;
+    --s-7: 48px;
+    --s-8: 64px;
+    --s-9: 96px;
+    --s-10: 128px;
+
+    /* Layout */
+    --topbar-h: 56px;
+    --actionbar-h: 72px;
+    --content-w: 840px;
+    --sidenav-w: 220px;
+    --max-w: 1440px;
+
+    /* Typography stacks */
+    --font-serif: 'Iowan Old Style', 'Charter', 'Bitstream Charter', 'Sitka Text', Cambria, Georgia, ui-serif, serif;
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', system-ui, 'Liberation Sans', sans-serif;
+    --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', 'Courier New', monospace;
+
+    /* Misc */
+    --radius: 6px;
+    --radius-sm: 4px;
+    --radius-pill: 999px;
+    --shadow-sm: 0 1px 2px rgba(10, 10, 10, 0.04);
+    --shadow-md: 0 6px 24px -8px rgba(10, 10, 10, 0.10);
+    --shadow-focus: 0 0 0 3px rgba(255, 90, 31, 0.18);
+    --transition: 180ms cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-fast: 120ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ============================================================
+     RESET & BASE
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; }
+  * { margin: 0; padding: 0; }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    scroll-padding-top: calc(var(--topbar-h) + var(--s-5));
+  }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--ink-1);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 1.55;
+    font-feature-settings: 'kern', 'liga', 'calt', 'ss01';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    padding-bottom: var(--actionbar-h);
+    min-height: 100vh;
+  }
+
+  button, input, textarea {
+    font: inherit;
+    color: inherit;
+  }
+  button { cursor: pointer; border: none; background: none; }
+  ol, ul { list-style: none; }
+  a { color: inherit; text-decoration: none; }
+
+  ::selection { background: var(--accent); color: #FFFFFF; }
+  :focus { outline: none; }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
+  }
+
+  /* ============================================================
+     TOPBAR
+     ============================================================ */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--bg);
+    border-bottom: 1px solid var(--line);
+    height: var(--topbar-h);
+    /* Isolate paint layer so scroll doesn't repaint the whole viewport */
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style paint;
+  }
+  .topbar__inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    height: 100%;
+    padding: 0 var(--s-6);
+    display: flex;
+    align-items: center;
+    gap: var(--s-5);
+  }
+  .topbar__brand {
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+    flex: 0 0 auto;
+    margin-right: auto;
+  }
+  .topbar__mark {
+    width: 26px;
+    height: 26px;
+    background: var(--ink-1);
+    color: var(--bg);
+    display: grid;
+    place-items: center;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .topbar__label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    text-transform: uppercase;
+  }
+  .topbar__progress {
+    display: flex;
+    align-items: center;
+    gap: var(--s-4);
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+  .topbar__progress-text {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+  }
+  .topbar__progress-text strong {
+    color: var(--ink-1);
+    font-weight: 600;
+  }
+  .topbar__progress-sep { color: var(--ink-3); margin: 0 4px; }
+  .topbar__progress-track {
+    width: 200px;
+    height: 3px;
+    background: var(--line);
+    border-radius: var(--radius-pill);
+    overflow: hidden;
+    position: relative;
+  }
+  .topbar__progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    background: var(--accent);
+    width: 0%;
+    transition: width 320ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* ============================================================
+     MODO TOGGLE (Account / Cliente)
+     ============================================================ */
+  .modo-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    background: var(--bg-elevated);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--ink-2);
+    transition: all var(--transition-fast);
+    flex: 0 0 auto;
+    line-height: 1;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .modo-toggle:hover {
+    border-color: var(--ink-3);
+    color: var(--ink-1);
+  }
+  .modo-toggle__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex: 0 0 auto;
+    transition: background var(--transition);
+    box-shadow: 0 0 0 3px rgba(255, 90, 31, 0.15);
+  }
+  body[data-modo="cliente"] .modo-toggle__dot {
+    background: var(--ok);
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+  }
+  .modo-toggle__label {
+    font-weight: 700;
+    color: var(--ink-1);
+  }
+
+  /* ============================================================
+     SIDENAV (only on wide screens)
+     ============================================================ */
+  .sidenav { display: none; }
+
+  @media (min-width: 1280px) {
+    .sidenav {
+      display: block;
+      position: fixed;
+      left: max(var(--s-6), calc((100vw - var(--max-w)) / 2 + var(--s-6)));
+      top: calc(var(--topbar-h) + var(--s-7));
+      width: var(--sidenav-w);
+      max-height: calc(100vh - var(--topbar-h) - var(--actionbar-h) - var(--s-9));
+      overflow-y: auto;
+      padding-right: var(--s-2);
+      /* Isolate so sticky scroll doesn't trigger repaints */
+      transform: translateZ(0);
+      contain: layout style paint;
+    }
+    .sidenav__heading {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--ink-3);
+      margin-bottom: var(--s-4);
+      padding-bottom: var(--s-3);
+      border-bottom: 1px solid var(--line);
+    }
+    .sidenav__list {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .sidenav__link {
+      display: flex;
+      align-items: baseline;
+      gap: var(--s-3);
+      padding: 8px var(--s-3);
+      font-size: 13px;
+      color: var(--ink-3);
+      transition: color var(--transition-fast), background var(--transition-fast);
+      border-radius: var(--radius-sm);
+      position: relative;
+      line-height: 1.35;
+    }
+    .sidenav__link:hover {
+      color: var(--ink-1);
+      background: var(--bg-subtle);
+    }
+    .sidenav__link[aria-current="true"] {
+      color: var(--ink-1);
+      font-weight: 500;
+    }
+    .sidenav__link[aria-current="true"]::before {
+      content: '';
+      position: absolute;
+      left: -1px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 2px;
+      height: 18px;
+      background: var(--accent);
+      border-radius: var(--radius-pill);
+    }
+    .sidenav__num {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      color: var(--ink-3);
+      font-variant-numeric: tabular-nums;
+      flex: 0 0 auto;
+      letter-spacing: 0.04em;
+    }
+    .sidenav__link[aria-current="true"] .sidenav__num { color: var(--accent); }
+    .sidenav__label { letter-spacing: -0.005em; }
+    .sidenav__count {
+      margin-left: auto;
+      font-family: var(--font-mono);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+      color: var(--ink-3);
+      flex: 0 0 auto;
+    }
+  }
+
+  /* ============================================================
+     MAIN LAYOUT
+     ============================================================ */
+  main {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    padding: 0 var(--s-6);
+  }
+  @media (min-width: 1280px) {
+    main {
+      padding-left: calc(var(--sidenav-w) + var(--s-9));
+      padding-right: var(--s-7);
+    }
+  }
+  @media (max-width: 768px) {
+    main { padding: 0 var(--s-4); }
+  }
+
+  /* ============================================================
+     CAPA / COVER
+     ============================================================ */
+  .capa {
+    min-height: calc(100vh - var(--topbar-h) - var(--actionbar-h));
+    padding: var(--s-9) 0 var(--s-7);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    max-width: var(--content-w);
+    position: relative;
+  }
+  .capa__eyebrow {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink-3);
+    margin-bottom: var(--s-7);
+    display: flex;
+    align-items: center;
+    gap: var(--s-3);
+  }
+  .capa__eyebrow-rule {
+    flex: 0 1 80px;
+    height: 1px;
+    background: linear-gradient(to right, var(--line-strong), transparent);
+  }
+  .capa__title {
+    font-family: var(--font-serif);
+    font-size: clamp(44px, 7vw, 88px);
+    line-height: 0.98;
+    letter-spacing: -0.022em;
+    color: var(--ink-1);
+    margin-bottom: var(--s-6);
+    font-weight: 600;
+    word-break: break-word;
+    hyphens: auto;
+  }
+  .capa__title-prefix {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-weight: 400;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: var(--s-3);
+  }
+  .capa__meta {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--ink-2);
+    margin-bottom: var(--s-7);
+    letter-spacing: 0.01em;
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--s-5);
+    align-items: center;
+    padding-top: var(--s-5);
+    border-top: 1px solid var(--line);
+  }
+  .capa__meta-item { display: flex; align-items: baseline; gap: var(--s-2); }
+  .capa__meta-label {
+    color: var(--ink-3);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+  }
+  .capa__notice {
+    border: 1px solid var(--line);
+    background: var(--bg-elevated);
+    padding: var(--s-4) var(--s-5);
+    border-radius: var(--radius);
+    margin-bottom: var(--s-6);
+    font-size: 13.5px;
+    color: var(--ink-2);
+    line-height: 1.5;
+    max-width: 580px;
+    display: flex;
+    gap: var(--s-3);
+    align-items: flex-start;
+  }
+  .capa__notice strong { color: var(--ink-1); font-weight: 600; }
+  .capa__notice-icon {
+    flex: 0 0 auto;
+    color: var(--accent);
+    margin-top: 2px;
+  }
+  .capa__cta-row {
+    display: flex;
+    align-items: center;
+    gap: var(--s-5);
+    flex-wrap: wrap;
+  }
+  .keyboard-hint {
+    font-size: 12.5px;
+    color: var(--ink-3);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    line-height: 1.6;
+  }
+
+  /* ============================================================
+     SECAO
+     ============================================================ */
+  .secao {
+    padding: var(--s-9) 0 var(--s-8);
+    border-top: 1px solid var(--line);
+    max-width: var(--content-w);
+    position: relative;
+    scroll-margin-top: var(--topbar-h);
+  }
+  .secao__header {
+    margin-bottom: var(--s-7);
+    display: grid;
+    grid-template-columns: minmax(64px, auto) 1fr;
+    column-gap: var(--s-5);
+    row-gap: var(--s-3);
+    align-items: baseline;
+  }
+  .secao__num {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--ink-3);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    text-transform: uppercase;
+    padding-top: 8px;
+  }
+  .secao__num-strong { color: var(--ink-1); font-weight: 600; }
+  .secao__title {
+    font-family: var(--font-serif);
+    font-size: clamp(28px, 3.5vw, 38px);
+    line-height: 1.1;
+    color: var(--ink-1);
+    letter-spacing: -0.018em;
+    font-weight: 500;
+    grid-column: 2;
+  }
+  .secao__sub {
+    grid-column: 2;
+    font-size: 14.5px;
+    color: var(--ink-2);
+    max-width: 60ch;
+    line-height: 1.5;
+  }
+  .secao__list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s-3);
+  }
+  .secao__empty {
+    border: 1px dashed var(--line-strong);
+    padding: var(--s-7) var(--s-6);
+    text-align: center;
+    color: var(--ink-3);
+    font-size: 14px;
+    border-radius: var(--radius);
+    font-style: italic;
+  }
+
+  /* ============================================================
+     BLOCO (the core component)
+     ============================================================ */
+  .bloco {
+    background: var(--bg-elevated);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    padding: var(--s-5) var(--s-6);
+    position: relative;
+    transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    outline: none;
+  }
+  .bloco:hover { border-color: var(--line-strong); }
+  .bloco:focus-visible {
+    border-color: var(--ink-3);
+    box-shadow: var(--shadow-focus);
+  }
+
+  /* Left state bar */
+  .bloco::before {
+    content: '';
+    position: absolute;
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 3px;
+    background: transparent;
+    border-radius: var(--radius) 0 0 var(--radius);
+    transition: background var(--transition);
+  }
+  .bloco[data-estado="confirmado"]::before { background: var(--ok); }
+  .bloco[data-estado="ajustar"]::before { background: var(--warn); }
+  .bloco[data-estado="lacuna"]::before { background: var(--danger); }
+
+  .bloco[data-estado="confirmado"] { background: linear-gradient(to right, var(--ok-tint) 0%, transparent 40%); }
+  .bloco[data-estado="ajustar"] { background: linear-gradient(to right, var(--warn-tint) 0%, transparent 40%); }
+  .bloco[data-estado="lacuna"] { background: linear-gradient(to right, var(--danger-tint) 0%, transparent 40%); }
+
+  .bloco__cabecalho {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--s-4);
+    margin-bottom: var(--s-3);
+  }
+  .bloco__title-row {
+    display: flex;
+    align-items: baseline;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .bloco__titulo {
+    font-family: var(--font-serif);
+    font-size: 19px;
+    line-height: 1.3;
+    color: var(--ink-1);
+    letter-spacing: -0.005em;
+    font-weight: 500;
+    word-break: break-word;
+  }
+  .bloco__conteudo {
+    color: var(--ink-2);
+    font-size: 15px;
+    line-height: 1.6;
+    margin-top: 2px;
+  }
+  .bloco__conteudo strong { color: var(--ink-1); font-weight: 600; }
+
+  /* Action group — segmented control */
+  .bloco__acoes {
+    display: flex;
+    gap: 1px;
+    flex: 0 0 auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    padding: 1px;
+    background: var(--bg);
+  }
+  .acao {
+    width: 32px;
+    height: 30px;
+    border-radius: 3px;
+    display: grid;
+    place-items: center;
+    color: var(--ink-3);
+    transition: all var(--transition-fast);
+  }
+  .acao:hover { background: var(--bg-subtle); color: var(--ink-1); }
+  .acao:active { transform: scale(0.94); }
+  .acao svg {
+    width: 16px;
+    height: 16px;
+    stroke-width: 2;
+  }
+
+  .bloco[data-estado="confirmado"] .acao--confirmado {
+    background: var(--ok); color: #FFFFFF;
+  }
+  .bloco[data-estado="ajustar"] .acao--ajustar {
+    background: var(--warn); color: #FFFFFF;
+  }
+  .bloco[data-estado="lacuna"] .acao--lacuna {
+    background: var(--danger); color: #FFFFFF;
+  }
+  .bloco[data-estado="confirmado"] .acao--confirmado:hover,
+  .bloco[data-estado="ajustar"] .acao--ajustar:hover,
+  .bloco[data-estado="lacuna"] .acao--lacuna:hover {
+    background: var(--ink-1);
+  }
+
+  /* Adjust textarea */
+  .bloco__ajuste {
+    margin-top: var(--s-4);
+    border-top: 1px dashed var(--line);
+    padding-top: var(--s-4);
+    overflow: hidden;
+    transition: max-height 220ms cubic-bezier(0.4, 0, 0.2, 1), opacity 180ms;
+    max-height: 240px;
+    opacity: 1;
+  }
+  .bloco__ajuste[hidden] {
+    display: block !important;
+    max-height: 0 !important;
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    border-top-width: 0 !important;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .bloco__ajuste-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--ink-3);
+    margin-bottom: var(--s-2);
+  }
+  .bloco__ajuste-textarea {
+    width: 100%;
+    min-height: 76px;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    border-radius: var(--radius-sm);
+    padding: var(--s-3);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--ink-1);
+    resize: vertical;
+    transition: border-color var(--transition);
+  }
+  .bloco__ajuste-textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: var(--shadow-focus);
+  }
+  .bloco__ajuste-textarea::placeholder { color: var(--ink-3); }
+
+  /* ============================================================
+     CHIP (factibilidade) — visible only in modo account
+     ============================================================ */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 22px;
+    padding: 0 10px;
+    border-radius: var(--radius-pill);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    border: 1px solid currentColor;
+    flex: 0 0 auto;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .chip--factivel { color: var(--ok); }
+  .chip--otimista { color: var(--warn); }
+  .chip--perigoso {
+    color: var(--danger);
+    background: var(--danger-tint);
+    border-color: var(--danger);
+  }
+  .chip__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex: 0 0 auto;
+  }
+
+  /* ============================================================
+     ALERTA INTERNO (visible only in modo account)
+     ============================================================ */
+  .alerta-interno {
+    margin-top: var(--s-3);
+    padding: var(--s-3) var(--s-4);
+    background: var(--accent-tint);
+    border-left: 2px solid var(--accent);
+    border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-1);
+    letter-spacing: 0.005em;
+  }
+  .alerta-interno::before {
+    content: 'INTERNO · ACCOUNT ONLY';
+    display: block;
+    font-size: 9.5px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .alerta-interno strong { color: var(--ink-1); font-weight: 700; }
+
+  /* Hide internal-only elements in modo cliente */
+  body[data-modo="cliente"] .chip,
+  body[data-modo="cliente"] .alerta-interno {
+    display: none !important;
+  }
+
+  /* ============================================================
+     ACTIONBAR (sticky bottom)
+     ============================================================ */
+  .actionbar {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 50;
+    background: var(--bg-elevated);
+    border-top: 1px solid var(--line);
+    height: var(--actionbar-h);
+    /* Isolate paint layer so scroll doesn't repaint the whole viewport */
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout style paint;
+  }
+  .actionbar__inner {
+    max-width: var(--max-w);
+    margin: 0 auto;
+    height: 100%;
+    padding: 0 var(--s-6);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--s-5);
+  }
+  @media (max-width: 768px) {
+    .actionbar__inner { padding: 0 var(--s-4); }
+  }
+  .counts {
+    display: flex;
+    gap: var(--s-3);
+    flex-wrap: wrap;
+  }
+  .count {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 32px;
+    padding: 0 var(--s-3);
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--line);
+    background: var(--bg-elevated);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--ink-2);
+    letter-spacing: 0.01em;
+    transition: border-color var(--transition);
+  }
+  .count svg { width: 13px; height: 13px; flex: 0 0 auto; }
+  .count strong {
+    color: var(--ink-1);
+    font-weight: 700;
+    font-size: 13px;
+  }
+  .count--confirmado { color: var(--ok); border-color: rgba(22, 163, 74, 0.28); }
+  .count--confirmado strong { color: var(--ok); }
+  .count--ajustar { color: var(--warn); border-color: rgba(217, 119, 6, 0.28); }
+  .count--ajustar strong { color: var(--warn); }
+  .count--lacuna { color: var(--danger); border-color: rgba(220, 38, 38, 0.28); }
+  .count--lacuna strong { color: var(--danger); }
+  .count--pendente { color: var(--ink-3); }
+  .count--pendente strong { color: var(--ink-1); }
+  .count__dot-empty {
+    width: 9px;
+    height: 9px;
+    border: 1px solid var(--ink-3);
+    border-radius: 50%;
+    background: transparent;
+    flex: 0 0 auto;
+  }
+
+  .actionbar__buttons {
+    display: flex;
+    gap: var(--s-3);
+    flex: 0 0 auto;
+  }
+
+  /* ============================================================
+     BUTTONS
+     ============================================================ */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--s-2);
+    height: 40px;
+    padding: 0 var(--s-5);
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    border: 1px solid transparent;
+    transition: all var(--transition-fast);
+    white-space: nowrap;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn svg { width: 14px; height: 14px; }
+
+  .btn--primary {
+    background: var(--accent);
+    color: #FFFFFF;
+    border-color: var(--accent);
+  }
+  .btn--primary:hover {
+    background: var(--accent-hover);
+    border-color: var(--accent-hover);
+    box-shadow: 0 4px 14px -4px rgba(255, 90, 31, 0.4);
+  }
+  .btn--ghost {
+    border-color: var(--line);
+    color: var(--ink-2);
+    background: var(--bg-elevated);
+  }
+  .btn--ghost:hover {
+    border-color: var(--ink-3);
+    color: var(--ink-1);
+  }
+  .btn--cover {
+    height: 48px;
+    padding: 0 var(--s-6);
+    font-size: 15px;
+  }
+  .btn--cover svg { width: 16px; height: 16px; }
+
+  /* ============================================================
+     KEYBOARD HINTS
+     ============================================================ */
+  .kbd {
+    display: inline-grid;
+    place-items: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border: 1px solid var(--line-strong);
+    border-bottom-width: 2px;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-2);
+    background: var(--bg-elevated);
+    line-height: 1;
+    font-weight: 500;
+  }
+
+  /* ============================================================
+     UTILITY
+     ============================================================ */
+  .visually-hidden {
+    position: absolute;
+    width: 1px; height: 1px;
+    padding: 0; margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  /* ============================================================
+     PRINT
+     ============================================================ */
+  @media print {
+    .topbar, .sidenav, .actionbar, .bloco__acoes, .keyboard-hint, .capa__cta-row { display: none !important; }
+    body { padding: 0; background: #FFFFFF; }
+    main { padding: 0 !important; max-width: 100% !important; }
+    .secao, .capa { break-inside: avoid; max-width: 100%; }
+    .bloco { break-inside: avoid; box-shadow: none; }
+  }
+
+  /* Smaller-screen tweaks */
+  @media (max-width: 768px) {
+    .topbar__progress-track { width: 100px; }
+    .topbar__label { display: none; }
+    .modo-toggle { padding: 0 10px; gap: 6px; }
+    .counts { gap: 6px; }
+    .count {
+      font-size: 11.5px;
+      padding: 0 10px;
+      gap: 6px;
+    }
+    .actionbar__inner { gap: var(--s-3); }
+    .btn { font-size: 13px; padding: 0 var(--s-4); }
+    .secao__header {
+      grid-template-columns: 1fr;
+      row-gap: var(--s-2);
+    }
+    .secao__title, .secao__sub { grid-column: 1; }
+    .bloco { padding: var(--s-4) var(--s-5); }
+    .bloco__cabecalho { flex-direction: column; gap: var(--s-3); }
+    .bloco__acoes { align-self: flex-start; }
+  }
+</style>
+</head>
+<body data-modo="account">
+
+<header class="topbar" role="banner">
+  <div class="topbar__inner">
+    <div class="topbar__brand">
+      <span class="topbar__mark" aria-hidden="true">V4</span>
+      <span class="topbar__label">Builders Hub · Kickoff</span>
+    </div>
+
+    <div class="topbar__progress" aria-label="Progresso do kickoff">
+      <span class="topbar__progress-text">
+        <strong id="progressDone">0</strong><span class="topbar__progress-sep">/</span><span id="progressTotal">0</span>
+        <span style="color:var(--ink-3);"> blocos</span>
+      </span>
+      <div class="topbar__progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="progressBar">
+        <div class="topbar__progress-fill" id="progressFill"></div>
+      </div>
+    </div>
+
+    <button class="modo-toggle" type="button" id="btnModo" aria-pressed="false" title="Trocar modo de exibição (Account ↔ Cliente)">
+      <span class="modo-toggle__dot" aria-hidden="true"></span>
+      <span>Modo: <span class="modo-toggle__label" id="modoLabel">Account</span></span>
+    </button>
+  </div>
+</header>
+
+<aside class="sidenav" id="sidenav" aria-label="Navegação das seções">
+  <div class="sidenav__heading">Seções</div>
+  <ol class="sidenav__list" id="sidenavList"></ol>
+</aside>
+
+<main id="main" role="main">
+
+  <section class="capa" id="capa" aria-labelledby="capaTitulo">
+    <div class="capa__eyebrow">
+      <span>Kickoff Deck</span>
+      <span class="capa__eyebrow-rule" aria-hidden="true"></span>
+      <span id="capaDate"></span>
+    </div>
+
+    <h1 class="capa__title" id="capaTitulo">
+      <span class="capa__title-prefix">Cliente</span>
+      <span id="capaCliente"></span>
+    </h1>
+
+    <div class="capa__meta">
+      <span class="capa__meta-item">
+        <span class="capa__meta-label">Squad</span>
+        <span id="capaSquad">—</span>
+      </span>
+      <span class="capa__meta-item">
+        <span class="capa__meta-label">Account</span>
+        <span id="capaAccount">—</span>
+      </span>
+      <span class="capa__meta-item">
+        <span class="capa__meta-label">Vendas</span>
+        <span id="capaVendedor">—</span>
+      </span>
+    </div>
+
+    <div class="capa__notice" role="note">
+      <svg class="capa__notice-icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"/>
+        <line x1="12" y1="16" x2="12" y2="12"/>
+        <line x1="12" y1="8" x2="12.01" y2="8"/>
+      </svg>
+      <span><strong>Antes da reunião:</strong> revise em <em>Modo Account</em> (vê análise interna). Antes de compartilhar a tela com o cliente, troque pra <em>Modo Cliente</em> no botão do topo. Estado e modo são salvos automaticamente neste navegador.</span>
+    </div>
+
+    <div class="capa__cta-row">
+      <button class="btn btn--cover btn--primary" type="button" id="btnComecar">
+        Começar
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="5" y1="12" x2="19" y2="12"/>
+          <polyline points="12 5 19 12 12 19"/>
+        </svg>
+      </button>
+      <span class="keyboard-hint">
+        ou aperte <span class="kbd">↓</span> · marque blocos com <span class="kbd">1</span> <span class="kbd">2</span> <span class="kbd">3</span> · exporte com <span class="kbd">E</span>
+      </span>
+    </div>
+  </section>
+
+  <div id="sectionsRoot"></div>
+
+</main>
+
+<footer class="actionbar" role="contentinfo">
+  <div class="actionbar__inner">
+    <div class="counts" aria-live="polite" aria-atomic="false">
+      <span class="count count--confirmado" title="Confirmado">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+        <strong id="countConfirmado">0</strong> confirmados
+      </span>
+      <span class="count count--ajustar" title="Ajustar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        <strong id="countAjustar">0</strong> ajustes
+      </span>
+      <span class="count count--lacuna" title="Lacuna">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <strong id="countLacuna">0</strong> lacunas
+      </span>
+      <span class="count count--pendente" title="Pendentes">
+        <span class="count__dot-empty" aria-hidden="true"></span>
+        <strong id="countPendente">0</strong> pendentes
+      </span>
+    </div>
+    <div class="actionbar__buttons">
+      <button class="btn btn--ghost" id="btnLimpar" type="button">Limpar tudo</button>
+      <button class="btn btn--primary" id="btnExportar" type="button">
+        Exportar JSON
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</footer>
+
+<script id="dados-handoff" type="application/json">
+{
+  "capa": {
+    "cliente": "Lopes & Campanelli Sociedade de Advogados",
+    "squad": "olim",
+    "account": "[Account não definido]",
+    "dataGeracao": "2025-07-16",
+    "vendedor": "Marcelo Rivelino"
+  },
+  "resumoVendas": [
+    {
+      "titulo": "Serviço combinado",
+      "conteudo": "Captação de leads qualificados, fortalecimento da autoridade digital, identidade visual e mentorias estratégicas.",
+      "alertaInterno": "Escopo amplo — durante o planejamento, fatiar em entregas concretas e mensuráveis (LP, plano de conteúdo, identidade)."
+    },
+    {
+      "titulo": "Investimento de mídia",
+      "conteudo": "**R$ 2.000/mês** em Meta Ads + **R$ 1.000/mês** em Google Ads = R$ 3.000/mês."
+    },
+    {
+      "titulo": "Ticket médio",
+      "conteudo": "**R$ 10.000** por venda."
+    },
+    {
+      "titulo": "Volume atual",
+      "conteudo": "Aproximadamente **50 ações por mês**."
+    },
+    {
+      "titulo": "Faturamento bruto declarado",
+      "conteudo": "R$ 150.000/ano.",
+      "alertaInterno": "⚠️ **Inconsistência:** 50 ações × R$ 10k ticket = R$ 6M/mês potencial × R$ 150k/ano. Provavelmente é só uma área, líquido dos sócios ou erro no form. Tratar com diplomacia — pergunta neutra na seção 'Perguntas em aberto'."
+    },
+    {
+      "titulo": "Marco inicial",
+      "conteudo": "Squad Olim · kickoff em 16/07/2025."
+    }
+  ],
+  "empresa": [
+    {
+      "titulo": "Áreas de atuação",
+      "conteudo": "Trabalhista, Imobiliário, Sucessório, Revisão e Administração Contratual, Direito do Consumidor, Civil e Planejamento Patrimonial. Modelo \"médico de família\" — relacionamento próximo e contínuo."
+    },
+    {
+      "titulo": "Sócios e governança",
+      "conteudo": "**Fernanda Campanelli** (sócia, governança) · **Isaac Lopes** (sócio, head Trabalhista + financeiro) · **Marco Aurélio Mendes** (sócio, head Cível) · Patrícia Madeira (coord. comercial) · Luciano Arsenio (atendimento) · Tainara e Gustavo (captação externa)."
+    },
+    {
+      "titulo": "Crescimento recente",
+      "conteudo": "Sede 90m² → 280m² · equipe 6 → 22 pessoas em 1 ano.",
+      "alertaInterno": "Tração forte — confirmar se nossa proposta está dimensionada pra esse ritmo de crescimento."
+    },
+    {
+      "titulo": "Diferencial declarado",
+      "conteudo": "Atendimento personalizado, imersão nos casos, sensibilidade, acessibilidade, estratégia moderna, vínculo sólido com o cliente.",
+      "alertaInterno": "Auto-percepção — separar do que a pesquisa de mercado vai validar."
+    },
+    {
+      "titulo": "Público-alvo",
+      "conteudo": "**Cível:** alto poder aquisitivo · **Trabalhista:** reclamantes · Interesse declarado em bancários e empresas de engenharia."
+    }
+  ],
+  "promessas": [
+    {
+      "titulo": "Captação de leads qualificados",
+      "conteudo": "Objetivo principal — vamos alinhar nossa estratégia pra entregar volume e qualidade.",
+      "factibilidade": "factivel",
+      "alertaInterno": "Sem número de leads/mês prometido em vendas — definir meta clara durante o kickoff (item nas Perguntas)."
+    },
+    {
+      "titulo": "Reposicionamento e autoridade digital",
+      "conteudo": "Trabalho de fortalecer presença digital. Vamos detalhar entregas concretas (LP, plano de conteúdo, identidade) no plano.",
+      "factibilidade": "otimista",
+      "alertaInterno": "Escopo amplo declarado em vendas — fatiar em entregas mensuráveis evita expectativa solta."
+    },
+    {
+      "titulo": "Unificação de identidade visual",
+      "conteudo": "Vocês mencionaram ter um manual de marca — vamos validar se usamos como base ou ajustamos.",
+      "factibilidade": "factivel"
+    },
+    {
+      "titulo": "Mentorias estratégicas",
+      "conteudo": "Sessões de mentoria como parte do escopo — definir cadência e quem conduz.",
+      "factibilidade": "otimista",
+      "alertaInterno": "Não detalhado em vendas — quem da V4 mentora? Com que frequência?"
+    },
+    {
+      "titulo": "Verba e expectativa de retorno",
+      "conteudo": "R$ 3.000/mês de mídia hoje. Vamos alinhar quantos leads esperar e em que prazo, considerando o setor jurídico.",
+      "factibilidade": "perigoso",
+      "alertaInterno": "🔴 Setor jurídico tem CPL alto (R$ 80–200). Com R$ 3k → 15-37 leads/mês qualificados. Cliente provavelmente espera mais. Use a pergunta 'Meta de leads/mês' pra calibrar expectativa antes de comprometer número."
+    }
+  ],
+  "acessos": [
+    {
+      "titulo": "Conta Meta Ads",
+      "conteudo": "Combinar acesso de admin pra V4 ou criar uma BM nova."
+    },
+    {
+      "titulo": "Conta Google Ads",
+      "conteudo": "Validar acesso ou definir se criamos uma conta nova sob nosso MCC."
+    },
+    {
+      "titulo": "Manual de marca",
+      "conteudo": "Vamos receber o arquivo pra equipe de design começar."
+    },
+    {
+      "titulo": "Acessos a redes sociais",
+      "conteudo": "Instagram (@lopesecampanelli), LinkedIn (company + Fernanda). Adicionar V4 como editor/admin."
+    },
+    {
+      "titulo": "Site (lclaw.com.br)",
+      "conteudo": "Acesso ao CMS e hospedagem pra instalar pixels e GTM."
+    },
+    {
+      "titulo": "Logos, fotos e vídeos",
+      "conteudo": "Confirmar o que já existe organizado e o que precisamos produzir.",
+      "alertaInterno": "Não está claro se cliente tem banco de imagens organizado. Se não tiver, vira escopo de produção."
+    }
+  ],
+  "combinados": [
+    {
+      "titulo": "Cadência de reunião",
+      "conteudo": "Sugestão: encontros semanais no primeiro mês, depois quinzenais. Fechamos assim?",
+      "alertaInterno": "Não definido em vendas. Semanal no início é padrão V4 pra ritmo bom de aprovação."
+    },
+    {
+      "titulo": "Canal de comunicação",
+      "conteudo": "WhatsApp pro dia a dia + e-mail pras pautas formais. Funciona?",
+      "alertaInterno": "Não definido em vendas. Importante registrar pra não cair em conversas paralelas."
+    },
+    {
+      "titulo": "Ponto focal de vocês",
+      "conteudo": "Quem do escritório vai ser nosso interlocutor principal pras decisões? Fernanda, Patrícia ou outro?",
+      "alertaInterno": "Não claro nos inputs — Fernanda? Patrícia (coord. comercial)? Forçar definição."
+    },
+    {
+      "titulo": "Ponto focal V4",
+      "conteudo": "Account responsável pela conta + áreas de apoio (mídia, criação, planejamento)."
+    },
+    {
+      "titulo": "Tempo de resposta",
+      "conteudo": "Vamos combinar um SLA de resposta razoável pros dois lados.",
+      "alertaInterno": "Lacuna total em vendas. Sugestão: 24h úteis pra ambos."
+    }
+  ],
+  "perguntas": [
+    {
+      "titulo": "Volume e faturamento",
+      "conteudo": "Pra dimensionar bem nossa estratégia, queria entender melhor: dos números que conversamos, qual é a fotografia mais real da operação hoje?",
+      "alertaInterno": "🔴 Form diz R$ 150k/ano de faturamento mas 50 ações × R$ 10k = R$ 500k/mês potencial. Pergunta diplomática pra reconciliar sem expor o erro de preenchimento."
+    },
+    {
+      "titulo": "Meta de leads por mês",
+      "conteudo": "Quantos leads qualificados/mês fariam essa parceria valer a pena pra vocês?",
+      "alertaInterno": "Sem número combinado em vendas — definir agora antes da operação rodar."
+    },
+    {
+      "titulo": "CAC aceitável",
+      "conteudo": "Com ticket de R$ 10k, qual % do ticket vocês veem como saudável investir pra adquirir um cliente novo?",
+      "alertaInterno": "Define se R$ 3k/mês é suficiente ou precisa escalar verba. Setor jurídico médio: 8-15% do ticket."
+    },
+    {
+      "titulo": "Área prioritária",
+      "conteudo": "Vocês atuam em 7 áreas. Pra começar com força, qual delas tem maior potencial de crescimento agora?",
+      "alertaInterno": "Espalhar verba em 7 áreas é ineficiente — forçar priorização."
+    },
+    {
+      "titulo": "Foco geográfico",
+      "conteudo": "Vocês atendem RJ e SP. Em qual delas faz mais sentido concentrar nossa primeira fase?"
+    },
+    {
+      "titulo": "Aprovação de criativos",
+      "conteudo": "Quem do time de vocês vai validar os criativos antes de publicar? Pra agilizar o fluxo.",
+      "alertaInterno": "🔴 Crítico — sem dono único de aprovação, criativo trava semanas. Forçar nome agora."
+    },
+    {
+      "titulo": "Escritórios de referência",
+      "conteudo": "Tem 3 ou 4 escritórios que vocês admiram ou observam? Ajuda a calibrar nossas referências.",
+      "alertaInterno": "Form diz \"escritórios de SP\" genericamente — pedir nomes pra análise da pesquisa profunda."
+    }
+  ],
+  "proximosPassos": [
+    {
+      "titulo": "Cliente envia: manual de marca + acessos a Meta/Google Ads + redes sociais",
+      "conteudo": "Combinar prazo realista pra reunir tudo."
+    },
+    {
+      "titulo": "V4 roda pesquisa profunda do mercado jurídico",
+      "conteudo": "Análise de mercado, concorrência e voz do consumidor antes do plano final.",
+      "alertaInterno": "Rodar /account-pesquisa-profunda-cliente após o kickoff."
+    },
+    {
+      "titulo": "V4 entrega plano de campanha inicial",
+      "conteudo": "Após validar área foco e meta de leads."
+    },
+    {
+      "titulo": "Cliente indica ponto focal único pra aprovações",
+      "conteudo": "Pra agilizar o ciclo de criação."
+    },
+    {
+      "titulo": "Próxima reunião",
+      "conteudo": "Definir cadência (semanal pra começar?) e canal."
+    }
+  ]
+}
+</script>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ------------------------------------------------------------
+   * Parse data
+   * ---------------------------------------------------------- */
+  let dados;
+  try {
+    dados = JSON.parse(document.getElementById('dados-handoff').textContent);
+  } catch (err) {
+    document.body.innerHTML =
+      '<pre style="padding:32px;font-family:ui-monospace,monospace;color:#DC2626;white-space:pre-wrap">' +
+      'Erro: JSON de dados-handoff inválido.\n\n' + (err && err.message ? err.message : err) +
+      '</pre>';
+    return;
+  }
+
+  /* ------------------------------------------------------------
+   * Section config
+   * ---------------------------------------------------------- */
+  const SECOES = [
+    { key: 'resumoVendas',    titulo: 'Resumo de vendas',         sub: 'O que combinamos no processo comercial — escopo, valores e expectativas.' },
+    { key: 'empresa',         titulo: 'Quem é a empresa',         sub: 'Quem são, o que fazem, como crescem.' },
+    { key: 'promessas',       titulo: 'Promessas e expectativas', sub: 'O que foi prometido e o que vamos validar juntos antes de operar.' },
+    { key: 'acessos',         titulo: 'Acessos e materiais',      sub: 'O que precisamos combinar pra equipe começar a operar.' },
+    { key: 'combinados',      titulo: 'Combinados de operação',   sub: 'Cadência, canais, ponto focal e SLAs.' },
+    { key: 'perguntas',       titulo: 'Pra alinhar com vocês',    sub: 'Pontos que precisam virar resposta nessa reunião pra calibrar a estratégia.' },
+    { key: 'proximosPassos',  titulo: 'Próximos passos',          sub: 'O que sai dessa reunião como ação concreta.' }
+  ];
+
+  const FACTIBILIDADE = {
+    factivel: 'Factível',
+    otimista: 'Otimista',
+    perigoso: 'Atenção'
+  };
+
+  /* ------------------------------------------------------------
+   * Utilities
+   * ---------------------------------------------------------- */
+  function slugify(s) {
+    return String(s || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/&/g, 'e')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function escapeHTML(s) {
+    return String(s == null ? '' : s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+  function renderConteudo(s) {
+    return escapeHTML(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  }
+  function debounce(fn, ms) {
+    let t;
+    return function () {
+      const args = arguments, ctx = this;
+      clearTimeout(t);
+      t = setTimeout(function () { fn.apply(ctx, args); }, ms);
+    };
+  }
+
+  /* ------------------------------------------------------------
+   * State + storage
+   * ---------------------------------------------------------- */
+  const SLUG = (dados.capa && dados.capa.slug) || slugify((dados.capa && dados.capa.cliente) || 'cliente');
+  const STORAGE_KEY = 'handoff-' + SLUG;
+  const STORAGE_KEY_MODO = 'handoff-modo';
+
+  let estado = {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) estado = JSON.parse(raw) || {};
+  } catch (err) {
+    console.warn('[handoff] localStorage indisponível ou corrompido — começando vazio.', err);
+    estado = {};
+  }
+  const salvarEstado = debounce(function () {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(estado)); }
+    catch (err) { console.warn('[handoff] Falha ao salvar:', err); }
+  }, 80);
+
+  /* ------------------------------------------------------------
+   * Inline SVG icon strings
+   * ---------------------------------------------------------- */
+  const ICONS = {
+    check:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>',
+    pencil: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>',
+    help:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>'
+  };
+
+  /* ------------------------------------------------------------
+   * Render: cover
+   * ---------------------------------------------------------- */
+  function renderCapa() {
+    const c = dados.capa || {};
+    document.getElementById('capaCliente').textContent = c.cliente || '[Cliente não definido]';
+    document.getElementById('capaSquad').textContent = c.squad || '—';
+    document.getElementById('capaAccount').textContent = c.account || '—';
+    document.getElementById('capaVendedor').textContent = c.vendedor || '—';
+    document.getElementById('capaDate').textContent = c.dataGeracao || new Date().toISOString().slice(0, 10);
+    document.title = 'Kickoff · ' + (c.cliente || 'Cliente');
+  }
+
+  /* ------------------------------------------------------------
+   * Render: sections + sidenav
+   * ---------------------------------------------------------- */
+  function renderSecoes() {
+    const root = document.getElementById('sectionsRoot');
+    const nav = document.getElementById('sidenavList');
+    const total = SECOES.length;
+
+    SECOES.forEach(function (sec, idx) {
+      const itens = Array.isArray(dados[sec.key]) ? dados[sec.key] : [];
+      const sectionId = 'secao-' + sec.key;
+
+      const $sec = document.createElement('section');
+      $sec.className = 'secao';
+      $sec.id = sectionId;
+      $sec.dataset.secao = sec.key;
+      $sec.setAttribute('aria-labelledby', sectionId + '-title');
+
+      let html = '';
+      html += '<header class="secao__header">';
+      html += '<div class="secao__num"><span class="secao__num-strong">' + escapeHTML(pad2(idx + 1)) + '</span> <span style="color:var(--ink-3)">/ ' + pad2(total) + '</span></div>';
+      html += '<h2 class="secao__title" id="' + sectionId + '-title">' + escapeHTML(sec.titulo) + '</h2>';
+      if (sec.sub) html += '<p class="secao__sub">' + escapeHTML(sec.sub) + '</p>';
+      html += '</header>';
+
+      if (!itens.length) {
+        html += '<div class="secao__empty">— Sem itens nesta seção. Adicione antes do kickoff ou trate como lacuna inteira.</div>';
+      } else {
+        html += '<div class="secao__list">';
+        itens.forEach(function (item, i) {
+          html += renderBloco(sec.key, i, item);
+        });
+        html += '</div>';
+      }
+
+      $sec.innerHTML = html;
+      root.appendChild($sec);
+
+      const $li = document.createElement('li');
+      $li.className = 'sidenav__item';
+      $li.innerHTML =
+        '<a class="sidenav__link" href="#' + sectionId + '" data-target="' + sectionId + '">' +
+          '<span class="sidenav__num">' + pad2(idx + 1) + '</span>' +
+          '<span class="sidenav__label">' + escapeHTML(sec.titulo) + '</span>' +
+          '<span class="sidenav__count" data-secao-count="' + sec.key + '">' + itens.length + '</span>' +
+        '</a>';
+      nav.appendChild($li);
+    });
+  }
+
+  function renderBloco(secaoKey, idx, item) {
+    const id = secaoKey + '-' + idx;
+    const st = estado[id] || {};
+    const acao = st.acao || '';
+    const nota = st.nota || '';
+    const fact = item.factibilidade;
+
+    let chipHtml = '';
+    if (fact && FACTIBILIDADE[fact]) {
+      chipHtml =
+        '<span class="chip chip--' + escapeHTML(fact) + '">' +
+          '<span class="chip__dot" aria-hidden="true"></span>' +
+          escapeHTML(FACTIBILIDADE[fact]) +
+        '</span>';
+    }
+
+    const alertaHtml = item.alertaInterno
+      ? '<div class="alerta-interno">' + renderConteudo(item.alertaInterno) + '</div>'
+      : '';
+
+    const ajusteHidden = acao !== 'ajustar' ? ' hidden' : '';
+
+    return (
+      '<article class="bloco" data-id="' + escapeHTML(id) + '" data-secao="' + escapeHTML(secaoKey) + '"' +
+        (acao ? ' data-estado="' + escapeHTML(acao) + '"' : '') +
+        ' tabindex="0" aria-labelledby="' + escapeHTML(id) + '-title">' +
+        '<header class="bloco__cabecalho">' +
+          '<div class="bloco__title-row">' +
+            '<h3 class="bloco__titulo" id="' + escapeHTML(id) + '-title">' + escapeHTML(item.titulo || '') + '</h3>' +
+            chipHtml +
+          '</div>' +
+          '<div class="bloco__acoes" role="group" aria-label="Marcar bloco">' +
+            '<button class="acao acao--confirmado" data-acao="confirmado" type="button" title="Confirmado · 1" aria-label="Marcar como confirmado">' + ICONS.check + '</button>' +
+            '<button class="acao acao--ajustar"    data-acao="ajustar"    type="button" title="Ajustar · 2"    aria-label="Marcar pra ajustar">'    + ICONS.pencil + '</button>' +
+            '<button class="acao acao--lacuna"     data-acao="lacuna"     type="button" title="Lacuna · 3"     aria-label="Marcar como lacuna">'   + ICONS.help + '</button>' +
+          '</div>' +
+        '</header>' +
+        (item.conteudo ? '<div class="bloco__conteudo">' + renderConteudo(item.conteudo) + '</div>' : '') +
+        alertaHtml +
+        '<div class="bloco__ajuste"' + ajusteHidden + '>' +
+          '<label class="bloco__ajuste-label" for="nota-' + escapeHTML(id) + '">Ajuste / nota</label>' +
+          '<textarea class="bloco__ajuste-textarea" id="nota-' + escapeHTML(id) + '" placeholder="O que precisa ajustar? Anote o ponto pra atualizar a KB depois.">' + escapeHTML(nota) + '</textarea>' +
+        '</div>' +
+      '</article>'
+    );
+  }
+
+  /* ------------------------------------------------------------
+   * Event handlers (delegated)
+   * ---------------------------------------------------------- */
+  function handleClick(e) {
+    const btn = e.target.closest('.acao');
+    if (!btn) return;
+    const bloco = btn.closest('.bloco');
+    if (!bloco) return;
+    const id = bloco.dataset.id;
+    const novaAcao = btn.dataset.acao;
+    const acaoAtual = (estado[id] && estado[id].acao) || null;
+
+    if (acaoAtual === novaAcao) {
+      if (estado[id]) {
+        delete estado[id].acao;
+        if (!estado[id].nota) delete estado[id];
+      }
+      bloco.removeAttribute('data-estado');
+    } else {
+      estado[id] = estado[id] || {};
+      estado[id].acao = novaAcao;
+      bloco.setAttribute('data-estado', novaAcao);
+    }
+
+    const ajuste = bloco.querySelector('.bloco__ajuste');
+    if (ajuste) {
+      const isAjustar = estado[id] && estado[id].acao === 'ajustar';
+      if (isAjustar) {
+        ajuste.removeAttribute('hidden');
+        setTimeout(function () {
+          const ta = ajuste.querySelector('textarea');
+          if (ta) ta.focus();
+        }, 60);
+      } else {
+        ajuste.setAttribute('hidden', '');
+      }
+    }
+
+    salvarEstado();
+    atualizarContadores();
+  }
+
+  const handleInput = debounce(function (e) {
+    const ta = e.target.closest('.bloco__ajuste-textarea');
+    if (!ta) return;
+    const bloco = ta.closest('.bloco');
+    if (!bloco) return;
+    const id = bloco.dataset.id;
+    estado[id] = estado[id] || {};
+    estado[id].nota = ta.value;
+    if (!estado[id].acao && !estado[id].nota) delete estado[id];
+    salvarEstado();
+  }, 280);
+
+  /* ------------------------------------------------------------
+   * Counters + progress
+   * ---------------------------------------------------------- */
+  function atualizarContadores() {
+    let total = 0, conf = 0, aj = 0, lac = 0;
+    SECOES.forEach(function (sec) {
+      const itens = Array.isArray(dados[sec.key]) ? dados[sec.key] : [];
+      total += itens.length;
+      itens.forEach(function (_, i) {
+        const id = sec.key + '-' + i;
+        const a = estado[id] && estado[id].acao;
+        if (a === 'confirmado') conf++;
+        else if (a === 'ajustar') aj++;
+        else if (a === 'lacuna') lac++;
+      });
+    });
+    const respondidos = conf + aj + lac;
+    const pendentes = total - respondidos;
+    const pct = total > 0 ? (respondidos / total) * 100 : 0;
+
+    document.getElementById('progressDone').textContent = respondidos;
+    document.getElementById('progressTotal').textContent = total;
+    document.getElementById('progressFill').style.width = pct + '%';
+    const bar = document.getElementById('progressBar');
+    if (bar) bar.setAttribute('aria-valuenow', String(Math.round(pct)));
+
+    document.getElementById('countConfirmado').textContent = conf;
+    document.getElementById('countAjustar').textContent = aj;
+    document.getElementById('countLacuna').textContent = lac;
+    document.getElementById('countPendente').textContent = pendentes;
+  }
+
+  /* ------------------------------------------------------------
+   * Scroll spy — rAF-based, no flicker
+   * ---------------------------------------------------------- */
+  function setupScrollSpy() {
+    const sections = Array.prototype.slice.call(document.querySelectorAll('.secao'));
+    const links = Array.prototype.slice.call(document.querySelectorAll('.sidenav__link'));
+    if (!sections.length || !links.length) return;
+
+    let raf = 0;
+    let lastActiveId = '';
+
+    function update() {
+      raf = 0;
+      const scrollY = window.scrollY || window.pageYOffset || 0;
+      const probe = scrollY + window.innerHeight * 0.35;
+      let active = sections[0];
+      for (let i = 0; i < sections.length; i++) {
+        if (sections[i].offsetTop <= probe) active = sections[i];
+      }
+      const id = active.id;
+      if (id === lastActiveId) return;
+      lastActiveId = id;
+      links.forEach(function (l) {
+        if (l.dataset.target === id) l.setAttribute('aria-current', 'true');
+        else l.removeAttribute('aria-current');
+      });
+    }
+
+    function onScroll() {
+      if (raf) return;
+      raf = requestAnimationFrame(update);
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener('resize', onScroll, { passive: true });
+    update();
+  }
+
+  /* ------------------------------------------------------------
+   * Modo Account / Cliente
+   * ---------------------------------------------------------- */
+  function setupModo() {
+    const btn = document.getElementById('btnModo');
+    const label = document.getElementById('modoLabel');
+    if (!btn || !label) return;
+
+    let modo = 'account';
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY_MODO);
+      if (saved === 'cliente' || saved === 'account') modo = saved;
+    } catch (e) { /* ignore */ }
+
+    function aplicar() {
+      document.body.setAttribute('data-modo', modo);
+      label.textContent = modo === 'cliente' ? 'Cliente' : 'Account';
+      btn.setAttribute('aria-pressed', modo === 'cliente' ? 'true' : 'false');
+      btn.title = modo === 'cliente'
+        ? 'Modo Cliente · pronto pra compartilhar tela. Clique pra ver análise interna.'
+        : 'Modo Account · vendo análise interna. Clique antes de compartilhar a tela.';
+    }
+
+    btn.addEventListener('click', function () {
+      modo = (modo === 'account') ? 'cliente' : 'account';
+      try { localStorage.setItem(STORAGE_KEY_MODO, modo); } catch (e) { /* ignore */ }
+      aplicar();
+    });
+
+    aplicar();
+  }
+
+  /* ------------------------------------------------------------
+   * Export JSON
+   * ---------------------------------------------------------- */
+  function exportarJSON() {
+    atualizarContadores();
+    const conf = parseInt(document.getElementById('countConfirmado').textContent, 10) || 0;
+    const aj   = parseInt(document.getElementById('countAjustar').textContent, 10) || 0;
+    const lac  = parseInt(document.getElementById('countLacuna').textContent, 10) || 0;
+    const pend = parseInt(document.getElementById('countPendente').textContent, 10) || 0;
+
+    const out = {
+      meta: Object.assign({}, dados.capa || {}, {
+        slug: SLUG,
+        exportadoEm: new Date().toISOString(),
+        modo: document.body.getAttribute('data-modo') || 'account',
+        totais: { confirmado: conf, ajustar: aj, lacuna: lac, pendente: pend }
+      }),
+      secoes: {}
+    };
+
+    SECOES.forEach(function (sec) {
+      const itens = Array.isArray(dados[sec.key]) ? dados[sec.key] : [];
+      out.secoes[sec.key] = itens.map(function (item, i) {
+        const id = sec.key + '-' + i;
+        const st = estado[id] || {};
+        const merged = Object.assign({}, item);
+        merged.id = id;
+        merged.estado = st.acao || null;
+        merged.nota = st.nota || '';
+        return merged;
+      });
+    });
+
+    const json = JSON.stringify(out, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'kickoff-resultado-' + SLUG + '.json';
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () {
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }, 0);
+  }
+
+  /* ------------------------------------------------------------
+   * Keyboard shortcuts
+   * ---------------------------------------------------------- */
+  function getFocusedBloco() {
+    const active = document.activeElement;
+    if (!active || active === document.body) return null;
+    if (active.classList && active.classList.contains('bloco')) return active;
+    return active.closest && active.closest('.bloco');
+  }
+
+  function aplicarAcaoTeclado(acao) {
+    const bloco = getFocusedBloco();
+    if (!bloco) return false;
+    const btn = bloco.querySelector('.acao--' + acao);
+    if (btn) btn.click();
+    return true;
+  }
+
+  function setupKeyboard() {
+    document.addEventListener('keydown', function (e) {
+      const target = e.target;
+      const isTextField = target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT');
+      if (isTextField) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+
+      if (e.key === '1') {
+        if (aplicarAcaoTeclado('confirmado')) e.preventDefault();
+      } else if (e.key === '2') {
+        if (aplicarAcaoTeclado('ajustar')) e.preventDefault();
+      } else if (e.key === '3') {
+        if (aplicarAcaoTeclado('lacuna')) e.preventDefault();
+      } else if (e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+        exportarJSON();
+      } else if (e.key === 'ArrowDown' && (document.activeElement === document.body || document.activeElement === document.documentElement)) {
+        const first = document.querySelector('.secao');
+        if (first) {
+          e.preventDefault();
+          first.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------
+   * Init
+   * ---------------------------------------------------------- */
+  function init() {
+    setupModo();
+    renderCapa();
+    renderSecoes();
+    atualizarContadores();
+    setupScrollSpy();
+    setupKeyboard();
+
+    const root = document.getElementById('sectionsRoot');
+    root.addEventListener('click', handleClick);
+    root.addEventListener('input', handleInput);
+
+    document.getElementById('btnComecar').addEventListener('click', function () {
+      const first = document.querySelector('.secao');
+      if (first) first.scrollIntoView({ behavior: 'smooth' });
+    });
+    document.getElementById('btnExportar').addEventListener('click', exportarJSON);
+    document.getElementById('btnLimpar').addEventListener('click', function () {
+      const ok = confirm('Limpar todo o estado deste kickoff?\n\nIsso apaga todas as marcações (confirmado / ajustar / lacuna) e notas digitadas. Não dá pra desfazer.');
+      if (!ok) return;
+      try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* ignore */ }
+      location.reload();
+    });
+
+    document.querySelectorAll('.sidenav__link').forEach(function (link) {
+      link.addEventListener('click', function (e) {
+        const id = link.dataset.target;
+        const target = document.getElementById(id);
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+          if (history && history.replaceState) history.replaceState(null, '', '#' + id);
+        }
+      });
+    });
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>

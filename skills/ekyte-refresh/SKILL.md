@@ -1,6 +1,6 @@
 ---
 name: ekyte-refresh
-description: Atualiza o cache local da skill ekyte-task — re-busca workspaces fixos, projetos do trimestre vigente para cada cliente, e tipos de tarefa do workflow "Padrão Colli&Co (Oficial)". Use quando o Fabio rodar /ekyte-refresh, disser que entrou cliente novo, projeto novo, ou que o cache parece desatualizado.
+description: Atualiza o cache local da skill ekyte-task — re-busca workspaces fixos, projetos do trimestre vigente para cada cliente, tipos de tarefa do workflow "Padrão Colli&Co (Oficial)", e regenera o cache de fluxos (fases por tipo) via MCP oficial. Use quando o Fabio rodar /ekyte-refresh, disser que entrou cliente novo, projeto novo, que mudou fluxo/fase de algum tipo, ou que o cache parece desatualizado.
 user-invocable: true
 ---
 
@@ -61,6 +61,21 @@ Filtrar tipos cujo nome casa o regex `^\[\d+\]\[([A-Z]+)\]`.
 
 Atualizar a tabela do cache com qualquer tipo novo. **Não remover** entradas existentes (podem aparecer em desambiguação).
 
+### 4.5) Fluxos por tipo (regenerar `flows.md`)
+
+Regenera `clientes/_skill-ekyte/flows.md` — as fases reais de cada tipo (com `phaseId`) + dicionário `nome da fase → phaseId`, usado pela `/ekyte-task` pra trocar responsável de etapa (passo 9.6 de lá).
+
+Roda o script bundlado (lê o token do MCP oficial direto do `~/.claude/mcp.json` — sem segredo no repo; parseia os tipos do `cache.md`; usa `get_task_type_flow` e fica só com fases `effort/duration > 0`):
+
+```bash
+python ".claude/skills/ekyte-refresh/scripts/fetch_flows.py"
+```
+
+- Rode **depois** do passo 4 (assim qualquer tipo novo já entra no `flows.md`).
+- Precisa do MCP `ekyte-oficial` configurado. Se faltar, o script avisa e você pula esta etapa (o resto do refresh segue).
+- Saída esperada: `OK -> ...flows.md: N/N tipos, M fases distintas`. Se algum tipo der `ERR`, ele entra no `flows.md` marcado com ⚠️ e o resto continua.
+- Paths customizados: `--cache "<...>"` / `--out "<...>"` (defaults relativos à raiz do repo).
+
 ### 5) Salvar e reportar
 
 Atualizar `clientes/_skill-ekyte/cache.md`:
@@ -73,6 +88,7 @@ Reportar pro Fabio:
   - 8 workspaces (sem mudanças)
   - <N> projetos Q2/2026 descobertos
   - <M> tipos de tarefa (<+X> novos)
+  - flows.md regenerado (<T> tipos, <P> fases distintas)
 ```
 
 ## O que NÃO fazer

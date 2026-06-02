@@ -1,6 +1,6 @@
 ---
 name: ekyte-briefing
-description: Monta briefings ricos e estruturados pra tarefas do Ekyte com base em templates locais por sigla, contexto puxado do NotebookLM do cliente, e perguntas ativas estruturadas. Usado como subskill da `/ekyte-task` — recebe pacote {cliente, sigla, tipo, qtd, input, modo} e devolve HTML pronto pra entrar no campo `description_create_task` do Ekyte. Pode ser invocada avulsa quando o usuário só quer pensar/estruturar uma demanda sem subir task. Suporta modo 5W1H quando vem planilha de plano de ação.
+description: Monta briefings ricos e estruturados pra tarefas do Ekyte com base em templates locais por sigla, contexto puxado do NotebookLM do cliente, e perguntas ativas estruturadas. Usado como subskill da `/ekyte-task` — recebe pacote {cliente, sigla, tipo, qtd, input, modo} e devolve texto plano formatado pronto pra entrar no campo `description_create_task` do Ekyte. Pode ser invocada avulsa quando o usuário só quer pensar/estruturar uma demanda sem subir task. Suporta modo 5W1H quando vem planilha de plano de ação.
 user-invocable: true
 ---
 
@@ -10,14 +10,14 @@ Substitui o briefing "uma linha + `<<PREENCHER>>`" da v1 da `/ekyte-task` por um
 
 ## Quando usar
 
-**Modo subskill (principal)** — invocada pela `/ekyte-task` no passo 6 da criação de task. Recebe pacote estruturado, devolve briefing HTML pronto.
+**Modo subskill (principal)** — invocada pela `/ekyte-task` no passo 6 da criação de task. Recebe pacote estruturado, devolve briefing em texto plano formatado pronto.
 
 **Modo avulso** — Fabio chama direto:
 - `/ekyte-briefing` + descrição livre
 - "me brieffa um CA pro Euro com foco em remarketing produto X"
 - "preciso pensar essa demanda CRM antes de subir — me ajuda a montar o briefing"
 
-Em modo avulso, a skill devolve o briefing HTML **e** o Markdown limpo, e pergunta se Fabio quer subir como task (aí invoca `/ekyte-task`).
+Em modo avulso, a skill devolve o texto formatado para Ekyte **e** o Markdown limpo, e pergunta se Fabio quer subir como task (aí invoca `/ekyte-task`).
 
 ## Pré-requisitos
 
@@ -25,8 +25,8 @@ Em modo avulso, a skill devolve o briefing HTML **e** o Markdown limpo, e pergun
 - Cache `clientes/_skill-ekyte/cache.md` populado (workspaces/projetos/tipos).
 - `clientes/_skill-ekyte/drives.md` populado (drives dos clientes).
 - `clientes/_skill-ekyte/briefing-templates/*.md` presentes (templates por sigla + base + universal + 5W1H).
-- Cliente alvo precisa ter `clientes/<cliente>/CLAUDE.md` com bloco `## NotebookLM` (ou skill segue sem síntese, mas avisa).
-- `notebooklm-py` autenticado (pra `/cs-notebooklm-consulta-cliente` rodar). Se não estiver, skill pula a síntese e segue.
+- Cliente alvo deve ter `clientes/<cliente>/CLAUDE.md` com bloco `## NotebookLM`. Em modo subskill da `/ekyte-task`, a skill deve tentar consultar NotebookLM; se faltar cadastro, pedir cadastro ou autorização explícita do gerente de projetos para seguir sem NotebookLM.
+- `notebooklm-py` autenticado (pra `/cs-notebooklm-consulta-cliente` rodar). Se não estiver, pedir login ou autorização explícita do gerente de projetos para seguir sem síntese.
 
 ## Pacote de entrada (modo subskill)
 
@@ -43,6 +43,7 @@ A `/ekyte-task` passa:
   "titulo": "[09][CA][IA] Euro Colchões | Remarketing produto X",
   "input_livre": "cria 9 CAs pro Euro com foco em remarketing produto X",
   "modo": "texto_livre",   // ou "planilha_demandas" ou "5w1h"
+  "projeto_novo": false,
   "planilha_5w1h_url": null,  // preenchido se modo=5w1h
   "planilha_demanda_row": null  // preenchido se modo=planilha_demandas
 }
@@ -92,13 +93,11 @@ Antes de invocar `/cs-notebooklm-consulta-cliente`, checar `clientes/<cliente>/p
 2. **Abrir `publicos-cache.md`** do cliente. Buscar bloco `## <linha>` (match case-insensitive, ignora acentos).
 
 3. **Decidir HIT/STALE/MISS:**
-   - **HIT** (idade < 75d): pré-preencher campos 3-9 do `_base-criativo.md` (consciência, faixa, sexo, ganchos) + avatar/ofertas/restrições/tom-de-voz com os valores do cache. Marcar no preview: `[do cache: <linha> · <N>d]`. **Pula** o passo 4 (NotebookLM) — cache já cobre o público.
+   - **HIT** (idade < 75d): pré-preencher campos 3-9 do `_base-criativo.md` (consciência, faixa, sexo, ganchos) + avatar/ofertas/restrições/tom-de-voz com os valores do cache. Marcar no preview: `[do cache: <linha> · <N>d]`. Cache cobre público; não substitui a consulta NotebookLM quando `projeto_novo: true` ou quando ainda não existe síntese de sessão para o cliente.
    - **STALE** (75d ≤ idade < 90d): usa o cache **mas** mostra aviso no preview da pergunta ativa: `⚠️ cache de público da linha "<X>" tem <N>d (expira em <M>d). Quer atualizar antes de seguir? (sim/não, default não)`. Resposta sim = força MISS path. Não/silêncio = HIT silencioso.
    - **MISS** (idade ≥ 90d OU bloco inexistente OU arquivo inexistente): segue pro passo 4 (NotebookLM completo). Após sucesso da consulta, **escrever o bloco no cache** (passo 4.5).
 
-4. **Modo subskill chamado pelo modo inline rápido da `/ekyte-task`:** se o pacote de entrada vem com flag `modo_inline_rapido: true` (ver `/ekyte-task` passo 8.4), a estratégia muda:
-   - HIT → usa cache, **não invoca NotebookLM em hipótese alguma**. Briefing inline montado direto da OBS da planilha + cache de público.
-   - MISS/STALE-com-update → invoca `/cs-notebooklm-consulta-cliente` **só com a pergunta de público** (1 pergunta dirigida sobre avatar/faixa/sexo/consciência/ganchos da linha alvo), não as 5 do `_base-criativo.md`. ~1min em vez de ~5min. Após resposta, popular cache normalmente.
+4. **Modo planilha com OBS robusta:** se o pacote de entrada veio da `/ekyte-task` com descrição substancial, usar a OBS como base do briefing, não como substituta do NotebookLM. HIT de cache pode dispensar apenas a pergunta específica de público; MISS/STALE-com-update invoca `/cs-notebooklm-consulta-cliente` para atualizar público. Se `projeto_novo: true`, rodar consulta NotebookLM atual mesmo com cache HIT.
 
 ### 4) Invocar `/cs-notebooklm-consulta-cliente`
 
@@ -112,8 +111,9 @@ Tarefa enviada:
 A skill `/cs-notebooklm-consulta-cliente` faz o trabalho pesado: decompõe, dispara, agrega, salva artefato. Retorna síntese estruturada.
 
 **Se a `/cs-notebooklm-consulta-cliente` retornar erro** (sessão expirada, cliente sem NotebookLM, etc):
-- Cliente sem NotebookLM cadastrado → seguir sem síntese, avisar Fabio.
-- Sessão expirada → avisar Fabio (`"Sessão NotebookLM expirou. Roda 'notebooklm login' e tenta de novo. Continuo o briefing sem síntese?"`) e perguntar se segue ou aborta.
+- Em modo subskill da `/ekyte-task`: pausar e pedir decisão. Cliente sem NotebookLM cadastrado → pedir `/notebooklm-cadastrar` ou comando explícito do gerente de projetos para seguir sem NotebookLM; sessão expirada → pedir `notebooklm login` ou comando explícito para seguir sem síntese.
+- Em modo subskill com `projeto_novo: true`: a tentativa de consulta NotebookLM é obrigatória. Se falhar, só continuar com autorização explícita do gerente de projetos, registrando no briefing que foi criado sem síntese NotebookLM.
+- Em modo avulso: avisar Fabio e perguntar se ele quer seguir sem síntese apenas como rascunho.
 
 Cachear síntese em memória (sessão).
 
@@ -274,7 +274,7 @@ Mostrar pra Fabio o briefing **renderizado em Markdown** (mais legível no chat)
 Confirma? (sim / editar campo X / regerar do zero)
 ```
 
-Se Fabio aprovar, skill devolve **HTML Quill** pra `/ekyte-task` (que cuida do preview da task em si e da chamada MCP).
+Se Fabio aprovar, skill devolve **texto plano formatado para Ekyte** pra `/ekyte-task` (que cuida do preview da task em si e da chamada MCP).
 
 Se modo avulso (não foi chamada pela `/ekyte-task`), perguntar se quer subir como task ("quer que eu invoque a /ekyte-task pra subir? sim/não").
 
@@ -284,15 +284,17 @@ Output estruturado:
 
 ```json
 {
-  "briefing_html": "<div><strong>BRIEFING — EURO COLCHÕES — CRIATIVO ADS</strong></div>...",
+  "briefing_ekyte_text": "BRIEFING — EURO COLCHÕES — CRIATIVO ADS\nTarefa: ...",
   "briefing_markdown": "BRIEFING — EURO COLCHÕES...",
   "campos_pendentes": [],
   "notebook_consultado": true,
+  "notebook_cache_usado": false,
+  "projeto_novo": false,
   "notebook_artefato": "clientes/euro/contexto-notebook/2026-04-30-1015-briefing-criativo-ca.md"
 }
 ```
 
-A `/ekyte-task` injeta `briefing_html` em `description_create_task` e segue o fluxo dela (preview de task, confirmação, MCP).
+A `/ekyte-task` injeta `briefing_ekyte_text` em `description_create_task` e segue o fluxo dela (preview de task, confirmação, MCP).
 
 ## Guardrails
 
@@ -306,7 +308,7 @@ A `/ekyte-task` injeta `briefing_html` em `description_create_task` e segue o fl
 
 5. **Ekyte via API REST recebe TEXTO PLANO, não HTML.** Validado em 2026-04-30: tags HTML enviadas via `description_create_task` aparecem como texto literal no editor (não renderizam). Padrão definitivo: gerar texto plano formatado com emojis numerados (1️⃣2️⃣3️⃣), TÍTULOS EM CAIXA ALTA, bullets `•`, URLs soltas (Quill autodetecta), quebras de linha. Sem `<>`, sem `**`, sem `##`. Renderiza em fonte monospace (estilo code block) mas fica perfeitamente legível.
 
-6. **Cliente sem NotebookLM cadastrado** (CLAUDE.md sem bloco `## NotebookLM`): skill segue sem síntese, avisa Fabio. Não tentar adivinhar contexto.
+6. **Cliente sem NotebookLM cadastrado** (CLAUDE.md sem bloco `## NotebookLM`): em modo subskill da `/ekyte-task`, pausar e pedir cadastro ou autorização explícita do gerente de projetos para seguir sem NotebookLM. Se autorizado, marcar no briefing: `NotebookLM: não consultado por autorização do gerente de projetos`. Não tentar adivinhar contexto.
 
 7. **Cliente sem Drive em `drives.md`** (DOM Suprimentos atualmente): perguntar no preview e oferecer `/ekyte-briefing-refresh` pra persistir.
 
@@ -314,7 +316,7 @@ A `/ekyte-task` injeta `briefing_html` em `description_create_task` e segue o fl
 
 9. **Cache de público não é compartilhado entre clientes**, mesmo quando NotebookLM é compartilhado (Euro+Eleva). Cada cliente tem seu `publicos-cache.md` — público é por marca, não por notebook.
 
-10. **MISS de cliente sem NotebookLM cadastrado**: não cachear nada. Briefing segue com pergunta ativa pura, e o `publicos-cache.md` **não é criado** pra esse cliente até que ele tenha NotebookLM.
+10. **MISS de cliente sem NotebookLM cadastrado**: não cachear nada. Briefing de task Ekyte só segue se o gerente de projetos autorizar explicitamente seguir sem NotebookLM; o `publicos-cache.md` **não é criado** pra esse cliente até que ele tenha NotebookLM.
 
 ## Como invocar
 

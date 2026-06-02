@@ -23,6 +23,7 @@ Existe pra resolver o caso "preciso de contexto desse cliente pra esta tarefa es
 - Usuario diz "consulta o NotebookLM do <cliente> sobre <X>".
 - Usuario diz "puxa contexto do <cliente> pra eu preparar <Y>".
 - Usuario quer briefing baseado em conhecimento ja registrado no NotebookLM, sem carregar arquivos locais.
+- `/ekyte-briefing` chama esta skill para montar briefing de task Ekyte. Nesse caso, principalmente com `projeto_novo: true`, a tentativa de consulta e obrigatoria: se faltar NotebookLM, login ou resposta valida, devolver erro claro para o briefing pausar e pedir cadastro/login ou autorizacao explicita do gerente de projetos para seguir sem NotebookLM.
 
 **Nao confundir com `/contexto`:** `/contexto` le arquivos locais e gera CLAUDE.md rico (uso amplo, uma vez por cliente). Esta skill aqui consulta NotebookLM remoto pra uma tarefa especifica (uso pontual, varias vezes). As duas convivem.
 
